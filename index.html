@@ -13,22 +13,14 @@
     .valid { color: green; background-color: #e0f8e0; border: 1px solid green; }
     .invalid { color: red; background-color: #f8e0e0; border: 1px solid red; }
     sub { font-size: smaller; vertical-align: sub; }
-    #chartContainer {
-      max-width: 800px;
-      margin: 20px auto;
-    }
-    #legend {
-      text-align: center;
-      font-family: Arial, sans-serif;
-      margin-top: 10px;
-    }
+    #chartContainer { max-width: 800px; margin: 20px auto; }
+    #legend { text-align: center; font-family: Arial, sans-serif; margin-top: 10px; }
   </style>
 
   <!-- Load MathJax -->
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script id="MathJax-script" async
-    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-  
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
   <!-- Load Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -41,28 +33,16 @@
 <h3>Expected Returns (%) and Portfolio Weights (fractions)</h3>
 <table>
   <thead>
-    <tr>
-      <th>Asset</th>
-      <th>Gold</th>
-      <th>Bitcoin</th>
-      <th>S&amp;P 500</th>
-      <th>Oil (WTI)</th>
-    </tr>
+    <tr><th>Asset</th><th>Gold</th><th>Bitcoin</th><th>S&amp;P 500</th><th>Oil (WTI)</th></tr>
   </thead>
   <tbody>
-    <tr>
-      <th>Expected Return</th>
-      <td>16%</td>
-      <td>95%</td>
-      <td>24%</td>
-      <td>45%</td>
-    </tr>
+    <tr><th>Expected Return</th><td>16%</td><td>95%</td><td>24%</td><td>45%</td></tr>
     <tr>
       <th>Weight (<b>w<sup>T</sup></b>)</th>
-      <td><input type="number" id="w1" value="0" step="0.01" min="0" max="1"/></td>
-      <td><input type="number" id="w2" value="0" step="0.01" min="0" max="1"/></td>
-      <td><input type="number" id="w3" value="0" step="0.01" min="0" max="1"/></td>
-      <td><input type="number" id="w4" value="0" step="0.01" min="0" max="1"/></td>
+      <td><input type="number" id="w1" step="0.01" min="0" max="1" value="0" /></td>
+      <td><input type="number" id="w2" step="0.01" min="0" max="1" value="0" /></td>
+      <td><input type="number" id="w3" step="0.01" min="0" max="1" value="0" /></td>
+      <td><input type="number" id="w4" step="0.01" min="0" max="1" value="0" /></td>
     </tr>
   </tbody>
 </table>
@@ -70,13 +50,7 @@
 <h3>Covariance Matrix (<b>S</b>)</h3>
 <table>
   <thead>
-    <tr>
-      <th></th>
-      <th>Gold</th>
-      <th>Bitcoin</th>
-      <th>S&amp;P 500</th>
-      <th>Oil (WTI)</th>
-    </tr>
+    <tr><th></th><th>Gold</th><th>Bitcoin</th><th>S&amp;P 500</th><th>Oil (WTI)</th></tr>
   </thead>
   <tbody>
     <tr><th>Gold</th><td>0.0225</td><td>0.0036</td><td>0.0045</td><td>0.0060</td></tr>
@@ -88,11 +62,7 @@
 
 <h3>Portfolio Risk Formula (Standard Deviation)</h3>
 <div style="text-align: center; margin-bottom: 20px;">
-  <p>
-    \( \displaystyle
-    \sigma_p = \sqrt{\mathbf{w}^T \mathbf{S} \mathbf{w}} = \sqrt{\sum_{i=1}^n \sum_{j=1}^n w_i S_{ij} w_j}
-    \)
-  </p>
+  <p>\(\displaystyle \sigma_p = \sqrt{\mathbf{w}^T \mathbf{S} \mathbf{w}} = \sqrt{\sum_{i=1}^n \sum_{j=1}^n w_i S_{ij} w_j}\)</p>
 </div>
 
 <div class="result" id="resultRisk"></div>
@@ -100,15 +70,14 @@
 <div class="constraint" id="returnConstraint"></div>
 <div class="constraint" id="weightSumConstraint"></div>
 
-<!-- Container for Chart -->
 <div id="chartContainer">
   <canvas id="returnDistChart" width="800" height="400"></canvas>
 </div>
 
 <div id="legend">
-  <span style="color:#4caf50;">&#9632; 1 std dev (68%)</span> &nbsp;|&nbsp;
-  <span style="color:#2196f3;">&#9632; 2 std dev (95%)</span> &nbsp;|&nbsp;
-  <span style="color:#f44336;">&#9632; 3 std dev (99.7%)</span>
+  <span style="color:#4caf50;">■ 1 std dev (68%)</span> &nbsp;|&nbsp;
+  <span style="color:#2196f3;">■ 2 std dev (95%)</span> &nbsp;|&nbsp;
+  <span style="color:#f44336;">■ 3 std dev (99.7%)</span>
 </div>
 
 <script>
@@ -121,6 +90,7 @@
   ];
 
   let chart = null;
+  let updateTimer = null;
 
   function normalPDF(x, mean, std) {
     return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mean) / std) ** 2);
@@ -131,76 +101,77 @@
   }
 
   function update() {
-    const w = [];
-    for (let i = 1; i <= 4; i++) {
-      let val = parseFloat(document.getElementById('w' + i).value);
-      if (isNaN(val) || val < 0) val = 0;
-      if (val > 1) val = 1;
-      w.push(val);
-      // Do NOT reset input value here to avoid typing interference
-    }
-
-    let expReturn = 0;
-    for (let i = 0; i < 4; i++) {
-      expReturn += w[i] * expectedReturns[i];
-    }
-    document.getElementById('resultReturn').textContent = `Expected Return: ${(expReturn * 100).toFixed(2)}%`;
-
-    let riskSquared = 0;
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        riskSquared += w[i] * covariance[i][j] * w[j];
+    if (updateTimer) clearTimeout(updateTimer);
+    updateTimer = setTimeout(() => {
+      const w = [];
+      for (let i = 1; i <= 4; i++) {
+        let val = parseFloat(document.getElementById('w' + i).value);
+        if (isNaN(val) || val < 0) val = 0;
+        if (val > 1) val = 1;
+        w.push(val);
       }
-    }
-    const risk = Math.sqrt(riskSquared);
-    document.getElementById('resultRisk').textContent = `Portfolio Risk: ${(risk * 100).toFixed(2)}%`;
 
-    const returnConstraint = document.getElementById('returnConstraint');
-    if (expReturn >= 0.30) {
-      returnConstraint.textContent = 'Return target of 30% met.';
-      returnConstraint.className = 'constraint valid';
-    } else {
-      returnConstraint.textContent = 'Return target of 30% NOT met.';
-      returnConstraint.className = 'constraint invalid';
-    }
+      let expReturn = w.reduce((acc, weight, idx) => acc + weight * expectedReturns[idx], 0);
+      document.getElementById('resultReturn').textContent = `Expected Return: ${(expReturn * 100).toFixed(2)}%`;
 
-    const weightSum = w.reduce((a, b) => a + b, 0);
-    const weightConstraint = document.getElementById('weightSumConstraint');
-    if (Math.abs(weightSum - 1) < 0.01) {
-      weightConstraint.textContent = 'Weights sum to 1 constraint met.';
-      weightConstraint.className = 'constraint valid';
-    } else {
-      weightConstraint.textContent = `Weights sum to 1 constraint NOT met (sum=${weightSum.toFixed(2)}).`;
-      weightConstraint.className = 'constraint invalid';
-    }
+      let riskSquared = 0;
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          riskSquared += w[i] * covariance[i][j] * w[j];
+        }
+      }
+      const risk = Math.sqrt(riskSquared);
+      document.getElementById('resultRisk').textContent = `Portfolio Risk (Std Dev): ${(risk * 100).toFixed(2)}%`;
 
-    // Prepare data for chart
-    const mu = expReturn;
-    const sigma = risk;
-    const step = sigma / 50;
+      const returnConstraint = document.getElementById('returnConstraint');
+      if (expReturn >= 0.30) {
+        returnConstraint.textContent = 'Return target of 30% met.';
+        returnConstraint.className = 'constraint valid';
+      } else {
+        returnConstraint.textContent = 'Return target of 30% NOT met.';
+        returnConstraint.className = 'constraint invalid';
+      }
 
-    const xVals = [];
-    for (let x = mu - 4 * sigma; x <= mu + 4 * sigma; x += step) {
-      xVals.push(x);
-    }
+      const weightSum = w.reduce((a, b) => a + b, 0);
+      const weightConstraint = document.getElementById('weightSumConstraint');
+      if (Math.abs(weightSum - 1) < 0.01) {
+        weightConstraint.textContent = 'Weights sum to 1 constraint met.';
+        weightConstraint.className = 'constraint valid';
+      } else {
+        weightConstraint.textContent = `Weights sum to 1 constraint NOT met (sum=${weightSum.toFixed(2)}).`;
+        weightConstraint.className = 'constraint invalid';
+      }
 
-    const yVals = xVals.map(x => normalPDF(x, mu, sigma));
+      // Prepare data for chart
+      const mu = expReturn;
+      const sigma = risk;
+      const pointCount = 150;
+      const step = (8 * sigma) / pointCount;
 
-    const oneStdData = shadedArea(xVals, mu, sigma, mu - sigma, mu + sigma);
-    const twoStdData = shadedArea(xVals, mu, sigma, mu - 2 * sigma, mu + 2 * sigma);
-    const threeStdData = shadedArea(xVals, mu, sigma, mu - 3 * sigma, mu + 3 * sigma);
+      const xVals = [];
+      for (let x = mu - 4 * sigma; x <= mu + 4 * sigma; x += step) {
+        xVals.push(x);
+      }
 
-    if (chart) {
-      chart.data.datasets[0].data = xVals.map((x, i) => ({ x, y: threeStdData[i] }));
-      chart.data.datasets[1].data = xVals.map((x, i) => ({ x, y: twoStdData[i] }));
-      chart.data.datasets[2].data = xVals.map((x, i) => ({ x, y: oneStdData[i] }));
-      chart.data.datasets[3].data = yVals.map((y, i) => ({ x: xVals[i], y }));
+      const yVals = xVals.map((x) => normalPDF(x, mu, sigma));
 
-      chart.options.scales.x.min = mu - 4 * sigma;
-      chart.options.scales.x.max = mu + 4 * sigma;
+      const oneStdData = shadedArea(xVals, mu, sigma, mu - sigma, mu + sigma);
+      const twoStdData = shadedArea(xVals, mu, sigma, mu - 2 * sigma, mu + 2 * sigma);
+      const threeStdData = shadedArea(xVals, mu, sigma, mu - 3 * sigma, mu + 3 * sigma);
 
-      chart.update();
-    }
+      // Update chart datasets
+      if (chart) {
+        chart.data.datasets[0].data = xVals.map((x, i) => ({ x, y: threeStdData[i] }));
+        chart.data.datasets[1].data = xVals.map((x, i) => ({ x, y: twoStdData[i] }));
+        chart.data.datasets[2].data = xVals.map((x, i) => ({ x, y: oneStdData[i] }));
+        chart.data.datasets[3].data = yVals.map((y, i) => ({ x: xVals[i], y }));
+
+        chart.options.scales.x.min = mu - 4 * sigma;
+        chart.options.scales.x.max = mu + 4 * sigma;
+
+        chart.update('none');  // Efficient update without animation
+      }
+    }, 150); // Debounce time to limit update frequency
   }
 
   window.onload = function () {
@@ -274,6 +245,7 @@
       },
     });
 
+    // Attach event listener with debounced update to input fields
     for (let i = 1; i <= 4; i++) {
       document.getElementById('w' + i).addEventListener('input', update);
     }
